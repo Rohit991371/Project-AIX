@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Colorful Animated Calculator</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg1:#1b1140; --bg2:#3b0f5c; --bg3:#0f2a5c;
+  --glass:rgba(255,255,255,.08); --glass-line:rgba(255,255,255,.16);
+  --num:#2b2566; --num-hi:#3a3287; --text:#f6f3ff;
+  --op-a:#ff3d9a; --op-b:#8a3dff;
+  --eq-a:#2f7bff; --eq-b:#19e3d0;
+  --sp-a:#ffb020; --sp-b:#ff6a3d;
+  --err:#ff6b8a;
+  --font:"Space Grotesk",system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%}
+body{
+  font-family:var(--font);color:var(--text);display:grid;place-items:center;padding:16px;
+  background:linear-gradient(135deg,var(--bg1),var(--bg2) 50%,var(--bg3));
+  background-size:200% 200%;animation:drift 18s ease-in-out infinite alternate;
+}
+@keyframes drift{to{background-position:100% 100%}}
+.calc{
+  width:min(360px,100%);padding:18px;border-radius:28px;
+  background:var(--glass);border:1px solid var(--glass-line);
+  backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);
+  box-shadow:0 30px 60px rgba(0,0,0,.4);
+}
+.display{
+  min-height:120px;padding:14px 12px 10px;display:flex;flex-direction:column;justify-content:flex-end;
+  align-items:flex-end;overflow:hidden;text-align:right;
+}
+.expr{font-size:1rem;opacity:.65;min-height:1.4em;word-break:break-all}
+.value{
+  font-size:3rem;font-weight:700;line-height:1.1;max-width:100%;
+  white-space:nowrap;letter-spacing:-.02em;font-variant-numeric:tabular-nums;
+}
+.value.pop{animation:pop .22s ease-out}
+@keyframes pop{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}}
+.value.error{color:var(--err);font-size:1.6rem;animation:shake .4s}
+@keyframes shake{20%,60%{transform:translateX(-8px)}40%,80%{transform:translateX(8px)}}
+.keys{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:8px}
+button{
+  position:relative;overflow:hidden;border:0;border-radius:18px;height:64px;
+  font:500 1.35rem var(--font);color:var(--text);cursor:pointer;
+  background:var(--num);box-shadow:0 4px 0 rgba(0,0,0,.25);
+  transition:transform .15s,box-shadow .15s,filter .15s;
+}
+button:hover{transform:translateY(-2px);box-shadow:0 8px 16px rgba(0,0,0,.35);filter:brightness(1.12)}
+button:active{transform:scale(.95);box-shadow:0 2px 0 rgba(0,0,0,.25)}
+button:focus-visible{outline:3px solid #fff;outline-offset:2px}
+.num{background:linear-gradient(160deg,var(--num-hi),var(--num))}
+.op{background:linear-gradient(135deg,var(--op-a),var(--op-b));font-size:1.6rem}
+.op.active{box-shadow:0 0 0 3px #fff,0 0 22px var(--op-a)}
+.eq{background:linear-gradient(135deg,var(--eq-a),var(--eq-b));font-size:1.6rem}
+.sp{background:linear-gradient(135deg,var(--sp-a),var(--sp-b));color:#2a1200;font-weight:700}
+.zero{grid-column:span 2}
+.ripple{
+  position:absolute;border-radius:50%;background:rgba(255,255,255,.45);
+  transform:scale(0);animation:ripple .55s ease-out;pointer-events:none;
+}
+@keyframes ripple{to{transform:scale(4);opacity:0}}
+@media (max-width:380px){button{height:56px}.value{font-size:2.4rem}}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important}
+}
+</style>
+</head>
+<body>
+<main class="calc" aria-label="Calculator">
+  <div class="display" role="status" aria-live="polite">
+    <div class="expr" id="expr"></div>
+    <div class="value" id="value">0</div>
+  </div>
+  <div class="keys" id="keys">
+    <button class="sp" data-act="clear" aria-label="All clear">AC</button>
+    <button class="sp" data-act="sign" aria-label="Toggle sign">+/−</button>
+    <button class="sp" data-act="percent" aria-label="Percent">%</button>
+    <button class="op" data-op="/" aria-label="Divide">÷</button>
+
+    <button class="num" data-num="7">7</button>
+    <button class="num" data-num="8">8</button>
+    <button class="num" data-num="9">9</button>
+    <button class="op" data-op="*" aria-label="Multiply">×</button>
+
+    <button class="num" data-num="4">4</button>
+    <button class="num" data-num="5">5</button>
+    <button class="num" data-num="6">6</button>
+    <button class="op" data-op="-" aria-label="Subtract">−</button>
+
+    <button class="num" data-num="1">1</button>
+    <button class="num" data-num="2">2</button>
+    <button class="num" data-num="3">3</button>
+    <button class="op" data-op="+" aria-label="Add">+</button>
+
+    <button class="num zero" data-num="0">0</button>
+    <button class="num" data-act="dot" aria-label="Decimal point">.</button>
+    <button class="eq" data-act="equals" aria-label="Equals">=</button>
+  </div>
+</main>
+
+<script>
+(() => {
+  const SYM = {"+":"+","-":"−","*":"×","/":"÷"};
+  const valueEl = document.getElementById("value");
+  const exprEl = document.getElementById("expr");
+  const keys = document.getElementById("keys");
+
+  let cur = "0";        // entry string
+  let prev = null;      // stored number
+  let op = null;        // pending operator
+  let fresh = true;     // next digit replaces the display
+  let error = false;
+
+  const clean = n => parseFloat(n.toPrecision(12)); // tames 0.1+0.2 style float noise
+  const fmt = s => {
+    const n = typeof s === "number" ? s : Number(s);
+    if (!isFinite(n)) return String(s);
+    let str = typeof s === "number" ? String(clean(n)) : s;
+    if (typeof s === "number" && str.length > 12) str = n.toExponential(6).replace(/\.?0+e/, "e");
+    if (str.includes("e")) return str;
+    const [i, d] = str.split(".");
+    const neg = i.startsWith("-");
+    const grouped = (neg ? i.slice(1) : i).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    return (neg ? "-" : "") + grouped + (d !== undefined ? "." + d : "");
+  };
+
+  function render(animate = true) {
+    valueEl.classList.toggle("error", error);
+    valueEl.textContent = error ? "Cannot divide by 0" : fmt(cur);
+    const len = valueEl.textContent.length;
+    if (!error) valueEl.style.fontSize = len > 16 ? "1.6rem" : len > 12 ? "2.1rem" : len > 9 ? "2.6rem" : "";
+    exprEl.textContent = error ? "" : (op && prev !== null ? `${fmt(prev)} ${SYM[op]}` : "");
+    document.querySelectorAll(".op").forEach(b =>
+      b.classList.toggle("active", !error && b.dataset.op === op && fresh));
+    if (animate) { valueEl.classList.remove("pop"); void valueEl.offsetWidth; valueEl.classList.add("pop"); }
+    if (error) { valueEl.style.animation = "none"; void valueEl.offsetWidth; valueEl.style.animation = ""; }
+  }
+
+  function reset() { cur = "0"; prev = null; op = null; fresh = true; error = false; }
+
+  function digit(d) {
+    if (error) reset();
+    if (fresh) { cur = d; fresh = false; }
+    else if (cur.replace(/[-.]/g, "").length < 15) cur = cur === "0" ? d : cur + d;
+    render();
+  }
+  function dot() {
+    if (error) reset();
+    if (fresh) { cur = "0."; fresh = false; }
+    else if (!cur.includes(".")) cur += ".";
+    render();
+  }
+  function compute(a, b, o) {
+    switch (o) {
+      case "+": return a + b;
+      case "-": return a - b;
+      case "*": return a * b;
+      case "/": return b === 0 ? null : a / b;
+    }
+  }
+  function chooseOp(o) {
+    if (error) reset();
+    if (op && !fresh) {
+      const r = compute(prev, Number(cur), op);
+      if (r === null) return fail();
+      prev = clean(r); cur = String(prev);
+    } else if (!op) prev = Number(cur);
+    op = o; fresh = true; render();
+  }
+  function equals() {
+    if (error || !op) return;
+    const r = compute(prev, Number(cur), op);
+    if (r === null) return fail();
+    exprEl.textContent = `${fmt(prev)} ${SYM[op]} ${fmt(Number(cur))} =`;
+    cur = String(clean(r)); prev = null; op = null; fresh = true;
+    const keep = exprEl.textContent;
+    render(); exprEl.textContent = keep;
+  }
+  function fail() { reset(); error = true; render(false); }
+  function sign() {
+    if (error) return;
+    if (cur !== "0") cur = cur.startsWith("-") ? cur.slice(1) : "-" + cur;
+    render();
+  }
+  function percent() {
+    if (error) return;
+    cur = String(clean(Number(cur) / 100)); fresh = true; render();
+  }
+  function back() {
+    if (error || fresh) return;
+    cur = cur.length > 1 && !(cur.length === 2 && cur.startsWith("-")) ? cur.slice(0, -1) : "0";
+    render();
+  }
+
+  const actions = {clear: () => { reset(); render(); }, sign, percent, dot, equals};
+
+  keys.addEventListener("click", e => {
+    const b = e.target.closest("button"); if (!b) return;
+    const r = document.createElement("span");
+    const rect = b.getBoundingClientRect(), s = Math.max(rect.width, rect.height) / 4;
+    r.className = "ripple";
+    r.style.cssText = `width:${s}px;height:${s}px;left:${e.clientX - rect.left - s/2}px;top:${e.clientY - rect.top - s/2}px`;
+    if (e.clientX === 0 && e.clientY === 0) r.style.cssText = `width:${s}px;height:${s}px;left:${rect.width/2 - s/2}px;top:${rect.height/2 - s/2}px`;
+    b.appendChild(r); setTimeout(() => r.remove(), 600);
+    if (b.dataset.num !== undefined) digit(b.dataset.num);
+    else if (b.dataset.op) chooseOp(b.dataset.op);
+    else if (b.dataset.act) actions[b.dataset.act]();
+  });
+
+  document.addEventListener("keydown", e => {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    const k = e.key;
+    if (/^[0-9]$/.test(k)) digit(k);
+    else if (k === "." || k === ",") dot();
+    else if ("+-*/".includes(k)) chooseOp(k);
+    else if (k === "x" || k === "X") chooseOp("*");
+    else if (k === "Enter" || k === "=") { e.preventDefault(); equals(); }
+    else if (k === "Escape" || k === "c" || k === "C") actions.clear();
+    else if (k === "Backspace") back();
+    else if (k === "%") percent();
+    else return;
+    if (k === "/") e.preventDefault();
+    const sel = /^[0-9]$/.test(k) ? `[data-num="${k}"]` : "+-*/".includes(k) ? `[data-op="${k}"]` : null;
+    const btn = sel && keys.querySelector(sel);
+    if (btn) { btn.animate?.([{transform:"scale(.93)"},{transform:"scale(1)"}], {duration:150}); }
+  });
+
+  render(false);
+})();
+</script>
+</body>
+</html>
